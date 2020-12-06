@@ -1,13 +1,25 @@
 import google.cloud.translate_v2 as tl
-import sys,os,random
+import os,random,json
+
+#Set up environment variables when imported
+__location__ = os.path.join(os.getcwd(),os.path.dirname(__file__))
+gac_filepath = os.path.join(__location__, 'gac-key.json')
+conf_filepath = os.path.join(__location__, 'config.json')
+cf = open(gac_filepath)
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(__location__, 'gac-key.json')
 
 class MTClient(tl.Client):
+    config = {'max-tl-chain': 20}
+    cfgfile = None
+    try:
+        cfgfile = open(conf_filepath)
+        cfgjson = cfgfile.read()
+        config = json.loads(cfgjson)
+    except FileNotFoundError:
+        print("WARNING: config.json file not found; using defaults.")
+            
     def __init__(self):
         #Set environment variable
-        __location__ = os.path.join(os.getcwd(),os.path.dirname(__file__))
-        gac_filepath = os.path.join(__location__, 'gac-key.json')
-        cf = open(gac_filepath)
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(__location__, 'gac-key.json')
         #Run parent init
         tl.Client.__init__(self)
         self.langdata = self.get_languages()
@@ -32,7 +44,7 @@ class MTClient(tl.Client):
         
         REQUIRED VALUES:
         inputstr  : The input string of text.
-        iters     : An integer defining the number of additional translations to be performed. Can range from 1 to 20.
+        iters     : An integer defining the number of additional translations to be performed. Default allowed range is 1~20.
         outputlang: The language to translate the resultant text into.
         
         OPTIONAL VALUES:
