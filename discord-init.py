@@ -1,5 +1,6 @@
 import discord
-import logging
+from discord.ext import commands
+import logging, re
 import mistranslate as mt
 
 #Initial setup
@@ -13,6 +14,18 @@ try:
     config = json.loads(cfgjson)
 except FileNotFoundError:
     print("FATAL: config.json file not found. Unable to log into Discord account.")
+
+cmdbot = commands.Bot(command_prefix='mistl:')
+
+@cmdbot.command()
+async def translate(ctx, *args):
+    list_mode = 0 # 0 = unused (normal translation), 1 = random chain blacklist, 2 = random chain whitelist, 3 = specific language list
+    iterations = 0
+    #Check parameters
+    while len(args) > 0:
+        curarg = args.pop(0)
+        #Check if parameter is a tag
+        if re.fullmatch(r'-\w+')
 
 class BotClient(discord.Client):
     async def on_ready(self):
