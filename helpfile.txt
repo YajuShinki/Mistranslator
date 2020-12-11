@@ -8,7 +8,7 @@ Translate a string of text. The output message shows the input and output.
     
     `-t <iterations>`: Make a translation chain of a specified length. A translation chain runs input through the translator multiple times, with a random language each time.
     `-l <langcodes>`: Use only the specified languages in the translation chain.
-    `-L <langcodes>`: Exclude the specified languages from the translation chain.
+    `-L <langcodes>`: Exclude the specified languages from the translation chain. Mutually exclusive with `-l`.
     
     `-s <langcodes>`: Make a custom translation chain using the languages specified in order. Mutually exclusive with `-o`, `-t`, `-l` and `-L`.
 

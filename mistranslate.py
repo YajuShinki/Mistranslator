@@ -8,7 +8,7 @@ conf_filepath = os.path.join(__location__, 'config.json')
 cf = open(gac_filepath)
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(__location__, 'gac-key.json')
 
-class MTClient(tl.Client):
+class mt_Client(tl.Client):
     config = {'max-tl-chain': 20}
     cfgfile = None
     try:
@@ -39,46 +39,55 @@ class MTClient(tl.Client):
         raise ValueError("Invalid language code '{0}'".format(langcode))
             
         
-    def chain_translate_random(self,inputstr,iters,outputlang,inputlang=None,listmode=0,langlist=None):
+    def chain_translate(self,inputstr,listmode,outputlang=None,iters=0,inputlang=None,langlist=None):
         """Run a string of text through the translator a set number of times, using random languages for each iteration. Returns a string.
         
         REQUIRED VALUES:
         inputstr  : The input string of text.
-        iters     : An integer defining the number of additional translations to be performed. Default allowed range is 1~20.
-        outputlang: The language to translate the resultant text into.
+        listmode  : Specifies whether the translation languages will be restricted. 0 = None; all languages may be used. 1 = Blacklist; languages in langlist will not be used. 2 = Whilelist; only languages in langlist will be used. 3 = Queue; input will be translated with the languages in langlist, in the order given.
+
         
         OPTIONAL VALUES:
+        outputlang: The language to translate the resultant text into. Defaults to config variable 'default-lang ('en' if config is absent.).
+        iters     : An integer defining the number of additional translations to be performed. Default allowed range is 1~20. Default value is 0 (standard translation).
         inputlang : The language code for input. If omitted, automatically determines language.
-        listmode  : Specifies whether the translation languages will be restricted. 0 = None; all languages may be used. 1 = Blacklist; languages in langlist will not be used. 2 = Whilelist; only languages in langlist will be used. Defaults to 0.
-        langlist  : A list or tuple of strings containing language codes to be used as either a language blacklist or whitelist, as specified by listmode.
+        langlist  : A list of strings containing language codes, or string of comma-separated language codes, to be used as either a language blacklist, whitelist or queue, as specified by listmode.
         """
         #Check parameter values
         if not isinstance(inputstr,str):
-            raise TypeError('Input must be a string')
-        
-        if not isinstance(iters,int):
-            raise TypeError('Number of iterations must be a valid integer')
-        elif iters < 1 or iters > 20:
-            raise ValueError('Number of iterations must be between 1 and 20')
-        
-        outputlang = self.check_langcode(outputlang)
-        
-        if inputlang != None:
-            inputlang = self.check_langcode(inputlang)
+            raise TypeError('Input must be a string.')
+        elif not inputstr:
+            raise ValueError('Input must not be blank.')
             
         if not isinstance(listmode,int):
-            raise TypeError('listmode must be an integer')
-        if listmode < 0 or listmode > 2:
-            raise ValueError('listmode must be 0, 1 or 2')
+            raise TypeError('listmode must be an integer.')
+        if listmode < 0 or listmode > 3:
+            raise ValueError('listmode must be between 0 and 3.')
         
         if listmode != 0:
             if isinstance(langlist,str):
                 langlist = langlist.split(',')
-            if isinstance(langlist,list) or isinstance(langlist,tuple):
+            if isinstance(langlist,list):
                 for i in langlist:
                     i = self.check_langcode(i)
+            if langlist == None:
+                raise TypeError('No language list was provided; the current flag(s) set require a language list.')
             else:
-                raise TypeError('Language list must be a list of strings, or a list in the form of a string')
+                raise TypeError('Language list must be a comma-separated list of language codes with no spaces or other symbols.')
+        
+        if (listmode == 1 or listmode == 2):
+            if not isinstance(iters,int):
+                raise TypeError('Number of iterations must be a valid integer')
+            elif iters < 1 or iters > config['max-tl-chain']:
+                raise ValueError(f"Number of iterations must be between 1 and {config['max-tl-chain']}.")
+        
+        if outputlang != None:
+            outputlang = self.check_langcode(outputlang)
+        
+        if inputlang != None:
+            inputlang = self.check_langcode(inputlang)
+        
+        
         
         #Once all data is validated, proceed with translation
         rval = {}
@@ -86,9 +95,13 @@ class MTClient(tl.Client):
         rval['inputlang'] = inputlang
         rval['iters'] = []
         curinput = inputstr
+        if listmode == 3:
+            iters = len(langlist)
         for i in range(iters):
             #Select a random language to translate to
-            if listmode == 2:
+            if listmode == 3:
+                thislang = langlist[i]
+            elif listmode == 2:
                 thislang = random.choice(langlist)
             else:
                 thislang = random.choice(self.langdata)['language']
@@ -102,7 +115,8 @@ class MTClient(tl.Client):
             #Discard the inputlang value for subsequent translations
             inputlang = None
             rval['iters'].append({'language':thislang,'result':curinput})
-        #Finally, translate the result to the target language
-        result = self.translate(curinput,outputlang,'text')
-        rval['iters'].append({'language':outputlang,'result':result['translatedText']})
+        #Finally, translate the result to the target language (unless listmode is 3)
+        if listmode != 3:
+            result = self.translate(curinput,outputlang,'text')
+            rval['iters'].append({'language':outputlang,'result':result['translatedText']})
         return rval
