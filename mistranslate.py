@@ -55,7 +55,7 @@ class mt_Client(tl.Client):
         """
         #Check parameter values
         if not isinstance(inputstr,str):
-            raise TypeError('Input must be a string.')
+            raise TypeError(f'Input must be a string. Received value: {type(inputstr)} ({inputstr})')
         elif not inputstr:
             raise ValueError('Input must not be blank.')
             
@@ -70,7 +70,7 @@ class mt_Client(tl.Client):
             if isinstance(langlist,list):
                 for i in langlist:
                     i = self.check_langcode(i)
-            if langlist == None:
+            elif langlist == None:
                 raise TypeError('No language list was provided; the current flag(s) set require a language list.')
             else:
                 raise TypeError('Language list must be a comma-separated list of language codes with no spaces or other symbols.')

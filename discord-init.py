@@ -23,30 +23,40 @@ if 'errormsg-time' not in config:
     config['errormsg-time'] = 120
 
 #custom functions
-async def send_parse_error(ctx,fullcmd,message):
+async def send_parse_error(ctx,message):
     embed = discord.Embed(title='Parse Error',description="I can't make sense of this command. Did you mistype?",colour=0xff0000)
-    embed.add_field(name=fullcmd,value=message)
+    embed.add_field(name='Command',value=ctx.message.content)
+    embed.add_field(name='Error',value=message)
     await ctx.send(ctx.author.mention,embed=embed,delete_after=config['errormsg-time'])
     
-async def send_value_error(ctx,fullcmd,message):
-    embed = discord.Embed(title='Value Error',description="One or more values you put in are the wrong type.",colour=0xff0000)
-    embed.add_field(name=fullcmd,value=message)
+async def send_value_error(ctx,message):
+    embed = discord.Embed(title='Value Error',description="One or more values you put in aren't quite right.",colour=0xff0000)
+    embed.add_field(name='Command',value=ctx.message.content)
+    embed.add_field(name='Error',value=message)
     await ctx.send(ctx.author.mention,embed=embed,delete_after=config['errormsg-time'])
     
+async def send_tl_error(ctx,inputstr,message):
+    embed = discord.Embed(title='Translation Error',description="Something went wrong while translating this text.",colour=0xff0000)
+    embed.add_field(name='Input',value=inputstr)
+    embed.add_field(name='Error',value=message)
+    await ctx.send(ctx.author.mention,embed=embed,delete_after=config['errormsg-time'])
 
+async def send_result(ctx,resultinfo,verbose=False):
+    embed = discord.Embed(title='Translation Result',colour=0x00ff3f)
+    embed.add_field(name='Input',value=resultinfo['input'])
+    if verbose:
+        embed.add_field(name='Input Language',value=resultinfo['inputlang'])
+        embed.add_field(name='Iteration Count',value=len(resultinfo['iters'])-1)
+        embed.add_field(name='Output Language',value=resultinfo['iters'][-1]['language'])
+    embed.add_field(name='Output',value=resultinfo['iters'][-1]['result'])
+    await ctx.send(ctx.author.mention,embed=embed)
     
 #Command parser
 cmdbot = commands.Bot(command_prefix='mistl:')
 
-@cmdbot.command()
-async def test(ctx):
-    print(ctx.message)
-    await ctx.send(ctx.author.mention+' Test Command')
-
-@cmdbot.command()
+@cmdbot.command(aliases=['tl','t'])
 async def translate(ctx, *args):
     args = list(args)
-    fullmsg = ' '.join(args)
     
     #set up variables
     inputstr = None
@@ -62,15 +72,15 @@ async def translate(ctx, *args):
         if curarg.startswith('-'):
             #Disallow composite arguments
             if len(curarg) > 2:
-                await send_parse_error(ctx,fullmsg,'Composite flags (i.e. flags with multiple option tags in one, like -vd) are not allowed.')
+                await send_parse_error(ctx,'Composite flags (i.e. flags with multiple option tags in one, like -vd) are not allowed.')
                 return
             #Warn about stray dashes/blank options
             elif len(curarg) == 1:
-                await send_parse_error(ctx,fullmsg,'Blank flags (i.e. lone dashes that are not part of the translation input) are not allowed as arguments.')
+                await send_parse_error(ctx,'Blank flags (i.e. lone dashes that are not part of the translation input) are not allowed as arguments.')
                 return
             #Check for duplicate flag
             elif curarg in flags:
-                await send_parse_error(ctx,fullmsg,f'Duplicate flag detected: `{curarg}`')
+                await send_parse_error(ctx,f'Duplicate flag detected: `{curarg}`')
                 return
             else:
                 #Process the option flag
@@ -78,7 +88,7 @@ async def translate(ctx, *args):
                 if curarg[1] in ('i','o','t','l','L','s'):
                     #Throw error if there's no more input
                     if not args:
-                        await send_parse_error(ctx,fullmsg,f'Flag `{curarg}` requires input, but no further input was detected.')
+                        await send_parse_error(ctx,f'Flag `{curarg}` requires input, but no further input was detected.')
                         return
                     else:
                         flags[curarg] = args.pop(0)
@@ -88,23 +98,57 @@ async def translate(ctx, *args):
             #If there are no more flags, treat the rest of the input as the text to translate
             inputstr = curarg + ' ' + ' '.join(args)
             break
+    #TODO: Check for mutually exclusive flags, set listmode and langlist
+    if '-s' in flags:
+        if ('-o' in flags or '-t' in flags or '-l' in flags or '-L' in flags):
+            await send_parse_error(ctx,'The `-s` flag may not be used in conjunction with `-o`,`-t`,`-l`, or `-L`.')
+            return
+        langlist = flags['-s']
+        mode = 3
+    if '-l' in flags and '-L' in flags:
+        await send_parse_error(ctx,'`-l` and `-L` cannot be used together.')
+        return
+    if '-l' in flags:
+        langlist = flags['-l']
+        mode = 2
+    if '-L' in flags:
+        langlist = flags['-L']
+        mode = 1
+    if '-t' in flags:
+        try:
+            flags['-t'] = int(flags['-t'])
+        except:
+            send_parse_error(ctx,'`-t` requires an integer value.')
     
-    print(f"\nSENDER: {ctx.message.author.name}\nINPUT: {inputstr}\nFLAGS: {flags}\n")
-    #TODO: Check for mutually exclusive flags
-    #if '-s' in flags and ('-o' in flags or '-t' in flags or '-l' in flags or '-L' in flags):
-        #pass
+    print(f"\nSENDER: {ctx.message.author.name}\nINPUT: {inputstr}\nTYPE: {type(inputstr)}\nMODE: {mode}\nLIST: {langlist}")
     
-    #TODO: Start translation
-    '''tlcl = mt.mt_Client()
+    #Start translation
+    print("DEBUG: Starting translation client...")
+    tlcl = mt.mt_Client()
     result = None
+    print("DEBUG: trigger_typing()...")
+    await ctx.trigger_typing()
+    print("DEBUG: Attempting translation...")
     try:
-        result = tlcl.chain_translate(inputstr,mode,flags.get('-o',None),flags.get('-t',None),flags.get('-i',None),langlist)
-    except (TypeError,ValueError):
-        pass
-    finally:
-        pass'''
-
+        result = tlcl.chain_translate(inputstr,mode,flags.get('-o',None),flags.get('-t',0),flags.get('-i',None),langlist)
+    except (TypeError,ValueError) as e:
+        await send_value_error(ctx,str(e))
+        return
+    except Exception as e:
+        await send_tl_error(ctx,inputstr,str(e))
+        return
+    await send_result(ctx,result,'-v' in flags)
+    print("TL_DONE")
+    return
 #TODO: Help function, standalone language detection, about
+
+@translate.error
+async def translate_error(ctx, error):
+    if isinstance(error,commands.errors.UnexpectedQuoteError):
+        await send_parse_error(ctx, "Unexpected quote mark in input. Make sure to properly escape your double quotes (using '\\\\\"').")
+    else:
+        print(','.join(error.args))
+        
 
 @cmdbot.event
 async def on_ready():
