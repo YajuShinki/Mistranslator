@@ -22,16 +22,30 @@ if 'errormsg-time' not in config:
     print("WARNING: Value 'errormsg-time' not found in config. Falling back to default error message lifetime of 120 seconds.")
     config['errormsg-time'] = 120
 
+#custom functions
+async def send_parse_error(ctx,fullcmd,message):
+    embed = discord.Embed(title='Parse Error',description="I can't make sense of this command. Did you mistype?",colour=0xff0000)
+    embed.add_field(name=fullcmd,value=message)
+    await ctx.send(ctx.author.mention,embed=embed,delete_after=config['errormsg-time'])
+    
+async def send_value_error(ctx,fullcmd,message):
+    embed = discord.Embed(title='Value Error',description="One or more values you put in are the wrong type.",colour=0xff0000)
+    embed.add_field(name=fullcmd,value=message)
+    await ctx.send(ctx.author.mention,embed=embed,delete_after=config['errormsg-time'])
+    
+
+    
+#Command parser
 cmdbot = commands.Bot(command_prefix='mistl:')
 
-async def send_parse_error(ctx,fullcmd,message):
-    embed = discord.Embed(title='Parse Error',description="I can't figure out what you need from me! Did you mistype?",colour=0xff0000)
-    embed.add_field(name='Command:',value=fullcmd)
-    embed.add_field(name='Error:',value=message)
-    await ctx.send(ctx.message.author.mention(),embed=embedmsg,delete_after=config['errormsg-time'])
+@cmdbot.command()
+async def test(ctx):
+    print(ctx.message)
+    await ctx.send(ctx.author.mention+' Test Command')
 
 @cmdbot.command()
 async def translate(ctx, *args):
+    args = list(args)
     fullmsg = ' '.join(args)
     
     #set up variables
@@ -48,23 +62,23 @@ async def translate(ctx, *args):
         if curarg.startswith('-'):
             #Disallow composite arguments
             if len(curarg) > 2:
-                await send_parse_error(fullmsg,'Composite flags (i.e. flags with multiple option tags in one, like -vd) are not allowed.')
+                await send_parse_error(ctx,fullmsg,'Composite flags (i.e. flags with multiple option tags in one, like -vd) are not allowed.')
                 return
             #Warn about stray dashes/blank options
             elif len(curarg) == 1:
-                await send_parse_error(fullmsg,'Blank flags (i.e. lone dashes that are not part of the translation input) are not allowed as arguments.')
+                await send_parse_error(ctx,fullmsg,'Blank flags (i.e. lone dashes that are not part of the translation input) are not allowed as arguments.')
                 return
             #Check for duplicate flag
             elif curarg in flags:
-                await send_parse_error(fullmsg,f'Duplicate flag detected: `{curarg}`')
+                await send_parse_error(ctx,fullmsg,f'Duplicate flag detected: `{curarg}`')
                 return
             else:
                 #Process the option flag
                 #Check if flag requires input
-                if re.fullmatch(r'-[iotlLs]'):
+                if curarg[1] in ('i','o','t','l','L','s'):
                     #Throw error if there's no more input
                     if not args:
-                        await send_parse_error(fullmsg,f'Flag `{curarg}` requires input, but no further input was detected.')
+                        await send_parse_error(ctx,fullmsg,f'Flag `{curarg}` requires input, but no further input was detected.')
                         return
                     else:
                         flags[curarg] = args.pop(0)
@@ -74,26 +88,26 @@ async def translate(ctx, *args):
             #If there are no more flags, treat the rest of the input as the text to translate
             inputstr = curarg + ' ' + ' '.join(args)
             break
-        
+    
+    print(f"\nSENDER: {ctx.message.author.name}\nINPUT: {inputstr}\nFLAGS: {flags}\n")
     #TODO: Check for mutually exclusive flags
-    if '-s' in flags and ('-o' in flags or '-t' in flags or '-l' in flags or '-L' in flags):
-        pass
+    #if '-s' in flags and ('-o' in flags or '-t' in flags or '-l' in flags or '-L' in flags):
+        #pass
     
     #TODO: Start translation
-    tlcl = mt.mt_Client()
+    '''tlcl = mt.mt_Client()
     result = None
     try:
         result = tlcl.chain_translate(inputstr,mode,flags.get('-o',None),flags.get('-t',None),flags.get('-i',None),langlist)
     except (TypeError,ValueError):
         pass
     finally:
-        pass
+        pass'''
 
 #TODO: Help function, standalone language detection, about
 
-class BotClient(discord.Client):
-    async def on_ready(self):
-        print('Login successful. User ID: {0}'.format(self.user))
-        
-client = BotClient()
-client.run(config['discord-auth-token'])
+@cmdbot.event
+async def on_ready():
+    print('Login successful. Username: {0}'.format(cmdbot.user.name))
+
+cmdbot.run(config['discord-auth-token'])
