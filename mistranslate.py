@@ -29,15 +29,14 @@ class mt_Client(tl.Client):
         self.langdata = self.get_languages()
     
     #Check whether or not a language code is valid.
-    def check_langcode(self,langcode):
+    def get_langcode(self,langcode,name=False):
         if not isinstance(langcode,str):
             raise TypeError('Language code must be a string')
         for i in self.langdata:
             if langcode.lower() == i['language'].lower() or langcode.lower() == i['name'].lower():
-                return i['language']
+                return i['name'] if name else i[language]
         #If no matches occur, the code is invalid
         raise ValueError("Invalid language code '{0}'".format(langcode))
-            
         
     def chain_translate(self,inputstr,listmode,outputlang=None,iters=0,inputlang=None,langlist=None):
         """Run a string of text through the translator a set number of times, using random languages for each iteration. Returns a string.
@@ -69,7 +68,7 @@ class mt_Client(tl.Client):
                 langlist = langlist.split(',')
             if isinstance(langlist,list):
                 for i in langlist:
-                    i = self.check_langcode(i)
+                    i = self.get_langcode(i)
             elif langlist == None:
                 raise TypeError('No language list was provided; the current flag(s) set require a language list.')
             else:
@@ -82,10 +81,10 @@ class mt_Client(tl.Client):
                 raise ValueError(f"Number of iterations must be between 1 and {config['max-tl-chain']}.")
         
         if outputlang != None:
-            outputlang = self.check_langcode(outputlang)
+            outputlang = self.get_langcode(outputlang)
         
         if inputlang != None:
-            inputlang = self.check_langcode(inputlang)
+            inputlang = self.get_langcode(inputlang)
         
         
         
