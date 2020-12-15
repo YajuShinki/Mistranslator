@@ -27,7 +27,7 @@ if 'errormsg-time' not in config:
     config['errormsg-time'] = 120
 
 #custom functions
-async def send_parse_error(ctx,message)
+async def send_parse_error(ctx,message):
     cmd = ctx.message.content
     if len(cmd) > 1024:
         cmd = cmd[:1021]+'...'
@@ -56,9 +56,9 @@ async def send_tl_error(ctx,inputstr,message):
 async def send_result(ctx,resultinfo,verbose=False,dump=False):
     #Check to make sure the input and output fit in the embed
     rfile=None
-    if len(resultinfo['input']) > 1024 or len(['iters'][-1]['result']) > 1024 or dump:
+    #if len(resultinfo['input']) > 1024 or len(['iters'][-1]['result']) > 1024 or dump:
         #If it's too big to fit on an embed, send it as an external file instead
-        
+        #rfname = 
         
     embed = discord.Embed(title='Translation Result',colour=0x00ff3f)
     embed.add_field(name='Input',value=resultinfo['input']) 

@@ -34,7 +34,7 @@ class mt_Client(tl.Client):
             raise TypeError('Language code must be a string')
         for i in self.langdata:
             if langcode.lower() == i['language'].lower() or langcode.lower() == i['name'].lower():
-                return i['name'] if name else i[language]
+                return i['name'] if name else i['language']
         #If no matches occur, the code is invalid
         raise ValueError("Invalid language code '{0}'".format(langcode))
         
