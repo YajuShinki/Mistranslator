@@ -1,10 +1,10 @@
+USAGE
+
 `mistl:translate [options] <message>`
-Translate a string of text. The output message shows the input and output.
+Translate a string of text. The output message shows the input and output. The input string must have properly escaped double quotes (so replace `"` with `\"`).
 **OPTIONS:**
     `-i <langcode>`: Force translator to read input as a specific language. When omitted, automatically detects language.
     `-o <langcode>`: Specify output language. Defaults to `en` (English).
-    `-v`: Verbose mode. Show input, languages, and output.
-    `-d`: Attach log dump to output message.
     
     `-t <iterations>`: Make a translation chain of a specified length. A translation chain runs input through the translator multiple times, with a random language each time.
     `-l <langcodes>`: Use only the specified languages in the translation chain.
@@ -12,5 +12,4 @@ Translate a string of text. The output message shows the input and output.
     
     `-s <langcodes>`: Make a custom translation chain using the languages specified in order. Mutually exclusive with `-o`, `-t`, `-l` and `-L`.
 
-    
-    
+`tl` or `t` can be used in place of `translate`. Language codes can either be language names or the ISO-639-1 language identifier. For a list of supported langauges, refer to this link: https://cloud.google.com/translate/docs/languages
