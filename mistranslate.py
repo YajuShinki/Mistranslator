@@ -111,11 +111,12 @@ class mt_Client(tl.Client):
             curinput = result['translatedText']
             if rval['inputlang'] == None:
                 rval['inputlang'] = result['detectedSourceLanguage']
+                rval['inputlangname'] = self.get_langcode(rval['inputlangname'],True)
             #Discard the inputlang value for subsequent translations
             inputlang = None
-            rval['iters'].append({'language':thislang,'result':curinput})
+            rval['iters'].append({'language':thislang,'result':curinput,'langname':self.get_langcode(thislang,True)})
         #Finally, translate the result to the target language (unless listmode is 3)
         if listmode != 3:
             result = self.translate(curinput,outputlang,'text')
-            rval['iters'].append({'language':outputlang,'result':result['translatedText']})
+            rval['iters'].append({'language':outputlang,'result':result['translatedText'],'langname':self.get_langcode(outputlang,True)})
         return rval

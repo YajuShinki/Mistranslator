@@ -63,7 +63,7 @@ async def send_result(ctx,resultinfo,verbose=False,dump=False):
     embed = discord.Embed(title='Translation Result',colour=0x00ff3f)
     embed.add_field(name='Input',value=resultinfo['input']) 
     if verbose:
-        embed.add_field(name='Input Language',value=resultinfo['inputlang'])
+        embed.add_field(name='Input Language',value=f'{resultinfo['inputlangname']} (`{resultinfo['inputlang']}`)')
         embed.add_field(name='Iterations',value=len(resultinfo['iters'])-1)
         embed.add_field(name='Output Language',value=resultinfo['iters'][-1]['language'])
     embed.add_field(name='Output',value=resultinfo['iters'][-1]['result'])
