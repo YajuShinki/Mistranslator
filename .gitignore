@@ -2,3 +2,5 @@ gac-key.json
 __pycache__
 **.kate-swp
 config.json
+filecache
+json_script.py

@@ -31,7 +31,7 @@ class mt_Client(tl.Client):
     #Check whether or not a language code is valid.
     def get_langcode(self,langcode,name=False):
         if not isinstance(langcode,str):
-            raise TypeError('Language code must be a string')
+            raise TypeError(f'Language code must be a string, received type {type(langcode)}, value: {langcode}')
         for i in self.langdata:
             if langcode.lower() == i['language'].lower() or langcode.lower() == i['name'].lower():
                 return i['name'] if name else i['language']
@@ -53,8 +53,8 @@ class mt_Client(tl.Client):
         langlist  : A list of strings containing language codes, or string of comma-separated language codes, to be used as either a language blacklist, whitelist or queue, as specified by listmode.
         """
         #Check parameter values
-        if not isinstance(inputstr,str):
-            raise TypeError(f'Input must be a string. Received value: {type(inputstr)} ({inputstr})')
+        if not (isinstance(inputstr,str) or isinstance(inputstr,list) or isinstance(inputstr,tuple)):
+            raise TypeError(f'Input must be a string, list or tuple. Received value: {type(inputstr)} ({inputstr})')
         elif not inputstr:
             raise ValueError('Input must not be blank.')
             
@@ -82,12 +82,12 @@ class mt_Client(tl.Client):
         
         if outputlang != None:
             outputlang = self.get_langcode(outputlang)
+        else:
+            outputlang = 'en'
         
         if inputlang != None:
             inputlang = self.get_langcode(inputlang)
-        
-        
-        
+
         #Once all data is validated, proceed with translation
         rval = {}
         rval['input'] = inputstr
@@ -108,15 +108,24 @@ class mt_Client(tl.Client):
                 thislang = random.choice(self.langdata)['language']
             #Translate and save this iteration
             result = self.translate(curinput,thislang,'text',inputlang)
-            curinput = result['translatedText']
+            if isinstance(result,list):
+                curinput = []
+                for i in result:
+                    curinput.append(i['translatedText'])
+            else:
+                curinput = result['translatedText']
             if rval['inputlang'] == None:
-                rval['inputlang'] = result['detectedSourceLanguage']
-                rval['inputlangname'] = self.get_langcode(rval['inputlangname'],True)
+                rval['inputlang'] = result[0]['detectedSourceLanguage'] if isinstance(result,list) else result['detectedSourceLanguage']
+                rval['inputlangname'] = self.get_langcode(rval['inputlang'],True)
             #Discard the inputlang value for subsequent translations
             inputlang = None
             rval['iters'].append({'language':thislang,'result':curinput,'langname':self.get_langcode(thislang,True)})
         #Finally, translate the result to the target language (unless listmode is 3)
         if listmode != 3:
             result = self.translate(curinput,outputlang,'text')
-            rval['iters'].append({'language':outputlang,'result':result['translatedText'],'langname':self.get_langcode(outputlang,True)})
+            if isinstance(result,list):
+                curinput = []
+                for i in result:
+                    curinput.append(i['translatedText'])
+            rval['iters'].append({'language':outputlang,'result':curinput if isinstance(result,list) else result['translatedText'],'langname':self.get_langcode(outputlang,True)})
         return rval

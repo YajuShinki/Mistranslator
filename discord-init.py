@@ -56,18 +56,19 @@ async def send_tl_error(ctx,inputstr,message):
 async def send_result(ctx,resultinfo,verbose=False,dump=False):
     #Check to make sure the input and output fit in the embed
     rfile=None
-    #if len(resultinfo['input']) > 1024 or len(['iters'][-1]['result']) > 1024 or dump:
-        #If it's too big to fit on an embed, send it as an external file instead
+    if len(resultinfo['input']) > 1024 or len(resultinfo['iters'][-1]['result']) > 1024 or dump:
+        #TODO: If it's too big to fit on an embed, send it as an external file instead
+        await send_tl_error(ctx,resultinfo['input'],"Input and output values that are 1024 characters in length aren't supported yet.")
+        return
         #rfname = 
-        
-    embed = discord.Embed(title='Translation Result',colour=0x00ff3f)
-    embed.add_field(name='Input',value=resultinfo['input']) 
-    if verbose:
-        
-        embed.add_field(name='Input Language',value=f'{resultinfo['inputlangname']} (`{resultinfo['inputlang']}`)')
-        embed.add_field(name='Iterations',value=f'{len(resultinfo['iters'])}'-1)
-        embed.add_field(name='Output Language',value=resultinfo['iters'][-1]['language'])
-    embed.add_field(name='Output',value=resultinfo['iters'][-1]['result'])
+    else:
+        embed = discord.Embed(title='Translation Result',colour=0x00ff3f)
+        embed.add_field(name='Input',value=resultinfo['input']) 
+        if verbose:
+            embed.add_field(name='Input Language',value=resultinfo['inputlangname']+' ('+resultinfo['inputlang']+')')
+            embed.add_field(name='Iterations',value=str(len(resultinfo['iters'])))
+            embed.add_field(name='Output Language',value=resultinfo['iters'][-1]['langname'])
+        embed.add_field(name='Output',value=resultinfo['iters'][-1]['result'])
     await ctx.send(ctx.author.mention,embed=embed,file=rfile)
     
 #Command parser
